@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import Replicate from "replicate";
 const replicate = new Replicate();
 
-
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -26,13 +25,19 @@ export async function POST(req: Request) {
       garment_image: Buffer.from(garmentBuffer)
     };
 
-    const output = await replicate.run("viktorfa/oot_diffusion:9f8fa4956970dde99689af7488157a30aa152e23953526a605df1d77598343d7", { input });
-    console.log(output);
-    
-    return NextResponse.json(
-      { status: "success", output }, 
-      { status: 200 }
-    );
+    const options = {
+      model: "viktorfa/oot_diffusion",
+      version: "9f8fa4956970dde99689af7488157a30aa152e23953526a605df1d77598343d7",
+      input,
+    }
+
+    const prediction = await replicate.predictions.create(options);
+
+    if (prediction?.error) {
+      return NextResponse.json({ detail: prediction.error }, { status: 500 });
+    }
+  
+    return NextResponse.json(prediction, { status: 201 });
   } catch (error: any) {
     console.error("File upload error:", error);
     return NextResponse.json(

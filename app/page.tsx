@@ -2,11 +2,18 @@
 import Image from "next/image";
 import { useState } from "react";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type Prediction = {
+  output: string[];
+  status: string;
+};
 
 export default function Home() {
+  const [prediction, setPrediction] = useState< Prediction | null>(null);
+  const [error, setError] = useState(null);
   const [modelPersonaFile, setModelPersonaFile] = useState<File | null>(null);
   const [modelGarmentFile, setModelGarmentFile] = useState<File | null>(null);
-  const [blobURL, setBlobURL] = useState<string | null>(null);
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>, 
@@ -20,7 +27,7 @@ export default function Home() {
   
   const generate = async () => {
     if (!modelPersonaFile || !modelGarmentFile) {
-      alert('Please select both files before generating.');
+      alert('Please upload the files.');
       return;
     }
 
@@ -29,18 +36,39 @@ export default function Home() {
     formData.append('modelGarment', modelGarmentFile);
 
     try {
-      const response = await fetch('api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      // const response = await fetch('api/predictions', {
+      //   method: 'POST',
+      //   body: formData,
+      // });
 
-      const result = await response.json();
-      console.log(result);
-      alert('Generation successful!');
+      // let prediction = await response.json();
+      // if (response.status !== 201) {
+      //   setError(prediction.detail);
+      //   return;
+      // }
+      
+      let prediction: any = {
+        id: 'v5mks04y4xrgp0cg166tzwhfz0',
+        status: 'starting',
+      };
+      setPrediction(prediction);
+
+      while(
+        prediction.status !== "succeeded" &&
+        prediction.status !== "failed"
+      ) {
+        await sleep(500);
+
+        const response = await fetch(`/api/predictions/${prediction.id}`);
+        prediction = await response.json();
+
+        if (response.status !== 200) {
+          setError(prediction.detail);
+          return;
+        }
+        console.log({ prediction });
+        setPrediction(prediction);
+      }
     } catch (error) {
       console.error('Error during generation:', error);
     }
@@ -48,9 +76,9 @@ export default function Home() {
 
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="flex flex-row w-full">
-        <div className="flex w-1/2 flex-col gap-6">
+    <main className="flex min-h-screen items-center justify-between p-24">
+      <div className="flex flex-col lg:flex-row w-full max-w-4xl gap-3 m-auto">
+        <div className="flex lg:w-1/2 flex-col gap-6">
           <div>
             <h1>Model Persona</h1>
             <input type="file" className="file-input w-full max-w-xs" accept="image/*"
@@ -67,22 +95,28 @@ export default function Home() {
             <button className="btn" onClick={generate}>Generate</button>
           </div>
         </div>
-        <div>
+        <div className="flex lg:w-1/2 flex-col">
           <h1>Generation</h1>
+          {error && <div>{error}</div>}
+          {prediction && (
+            <>
+              {prediction.output && (
+                <div className="relative w-full h-96 mt-5 overflow-hidden rounded-lg">
+                  <Image
+                    fill
+                    src={prediction.output[prediction.output.length - 1]}
+                    alt="output"
+                    sizes="(max-width: 100%) 100vw, (max-width: 100%) 50vw, 33vw"
+                    className="object-contain"
+                  />
+                </div>
+              )}
+              <p className="py-3 text-sm opacity-50">status: {prediction.status}</p>
+            </>
+          )}
+
         </div>
       </div>
     </main>
   );
-}
-
-function toBase64(file: File | Blob): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.readAsDataURL(file);
-		reader.onload = () => {
-			if (typeof reader.result !== "string") return;
-			resolve(reader.result);
-		};
-		reader.onerror = (error) => reject(error);
-	});
 }
