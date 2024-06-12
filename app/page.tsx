@@ -36,21 +36,21 @@ export default function Home() {
     formData.append('modelGarment', modelGarmentFile);
 
     try {
-      // const response = await fetch('api/predictions', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
+      const response = await fetch('api/predictions', {
+        method: 'POST',
+        body: formData,
+      });
 
-      // let prediction = await response.json();
-      // if (response.status !== 201) {
-      //   setError(prediction.detail);
-      //   return;
-      // }
+      let prediction = await response.json();
+      if (response.status !== 201) {
+        setError(prediction.detail);
+        return;
+      }
       
-      let prediction: any = {
-        id: 'v5mks04y4xrgp0cg166tzwhfz0',
-        status: 'starting',
-      };
+      // let prediction: any = {
+      //   id: 'v5mks04y4xrgp0cg166tzwhfz0',
+      //   status: 'starting',
+      // };
       setPrediction(prediction);
 
       while(
@@ -66,7 +66,7 @@ export default function Home() {
           setError(prediction.detail);
           return;
         }
-        console.log({ prediction });
+        // console.log({ prediction });
         setPrediction(prediction);
       }
     } catch (error) {
@@ -101,15 +101,19 @@ export default function Home() {
           {prediction && (
             <>
               {prediction.output && (
-                <div className="relative w-full h-96 mt-5 overflow-hidden rounded-lg">
-                  <Image
-                    fill
-                    src={prediction.output[prediction.output.length - 1]}
-                    alt="output"
-                    sizes="(max-width: 100%) 100vw, (max-width: 100%) 50vw, 33vw"
-                    className="object-contain"
-                  />
-                </div>
+                prediction.output.map((pred,i) => {
+                  return <div key={i}
+                  className="relative w-full h-96 mt-5 overflow-hidden rounded-lg">
+                    <Image
+                      fill
+                      src={pred}
+                      alt="output"
+                      sizes="(max-width: 100%) 100vw, (max-width: 100%) 50vw, 33vw"
+                      className="object-contain"
+                    />
+                  </div>
+
+                })
               )}
               <p className="py-3 text-sm opacity-50">status: {prediction.status}</p>
             </>
